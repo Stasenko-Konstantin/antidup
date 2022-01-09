@@ -1,56 +1,34 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"image"
+	"github.com/Stasenko-Konstantin/phash"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 )
 
-func compare(pic [16][4]int, compF string) (float32, error) {
-	comp, err := findHistogram(compF)
+func compare(pic string, compF string) (int, error) {
+	comp, err := findHash(compF)
 	if err != nil {
 		return 0, err
 	}
-
-	var percent float32
-	fmt.Printf("%-14s %6s %6s %6s %6s\n", "bin", "red", "green", "blue", "alpha")
-	for i, x := range pic {
-		fmt.Printf("0x%04x-0x%04x: %6d %6d %6d %6d\n", i<<12, (i+1)<<12-1, x[0], x[1], x[2], x[3])
-	}
-
-	fmt.Printf("\n%-14s %6s %6s %6s %6s\n", "bin", "red", "green", "blue", "alpha")
-	for i, x := range comp {
-		fmt.Printf("0x%04x-0x%04x: %6d %6d %6d %6d\n", i<<12, (i+1)<<12-1, x[0], x[1], x[2], x[3])
-	}
-
-	return percent, nil
+	return phash.GetDistance(pic, comp), nil
 }
 
-func findHistogram(pic string) ([16][4]int, error) {
-	var histogram [16][4]int
-	picReader, err := os.ReadFile(pic)
+func findHash(pic string) (string, error) {
+	img, err := os.Open(pic)
 	if err != nil {
-		return histogram, err
+		return "", err
 	}
-	picm, _, err := image.Decode(bytes.NewBuffer(picReader)) // hmmmmm
+	defer img.Close()
+
+	hash, err := phash.GetHash(img)
 	if err != nil {
-		return histogram, err
+		return "", err
 	}
-	bounds := picm.Bounds()
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			r, g, b, a := picm.At(x, y).RGBA()
-			histogram[r>>12][0]++
-			histogram[g>>12][1]++
-			histogram[b>>12][2]++
-			histogram[a>>12][3]++
-		}
-	}
-	return histogram, nil
+	return hash, nil
 }
 
 func findDuplicates(pics []string) (string, error) {
@@ -60,18 +38,26 @@ func findDuplicates(pics []string) (string, error) {
 	)
 
 	for n, pic := range pics {
-		histogram, err := findHistogram(pic)
+		hash, err := findHash(pic)
 		if err != nil {
 			return "", err
 		}
-		for _, comp := range pics[n:] {
+		if len(pics) > n+1 {
+			pics = append(pics[:n], pics[n+1:]...)
+		} else if len(pics) == 1 {
+			break
+		}
+		for _, comp := range pics {
 			dup := make(map[string]string)
-			percent, err := compare(histogram, comp)
+			distance, err := compare(hash, comp)
 			if err != nil {
 				return "", err
 			}
-			if percent < 0.1 {
+			if distance < 3 {
 				dup[pic] = comp
+			}
+			if len(dup) > 0 {
+				dups = append(dups, dup)
 			}
 		}
 	}
@@ -79,7 +65,6 @@ func findDuplicates(pics []string) (string, error) {
 		for k, e := range dup {
 			r += k + ": " + e + "\n"
 		}
-		r += "\n"
 	}
 	return r, nil
 }
