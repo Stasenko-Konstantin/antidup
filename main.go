@@ -42,12 +42,13 @@ func findDuplicates(pics []string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if len(pics) > n+1 {
-			pics = append(pics[:n], pics[n+1:]...)
-		} else if len(pics) == 1 {
-			break
+		var s []string
+		if len(pics) == 1 {
+			s = pics[n:]
+		} else {
+			s = pics[n+1:]
 		}
-		for _, comp := range pics {
+		for _, comp := range s {
 			dup := make(map[string]string)
 			distance, err := compare(hash, comp)
 			if err != nil {
