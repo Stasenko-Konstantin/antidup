@@ -6,3 +6,4 @@ to find duplicates of photos
 # TODO
 - [ ] .jpeg                                                   
 - [ ] optimizations
+- [ ] one file bug
