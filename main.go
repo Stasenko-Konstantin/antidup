@@ -9,12 +9,9 @@ import (
 	"strings"
 )
 
-func compare(pic string, compF string) (int, error) {
-	comp, err := findHash(compF)
-	if err != nil {
-		return 0, err
-	}
-	return phash.GetDistance(pic, comp), nil
+type pic struct {
+	name string
+	hash string
 }
 
 func findHash(pic string) (string, error) {
@@ -31,18 +28,14 @@ func findHash(pic string) (string, error) {
 	return hash, nil
 }
 
-func findDuplicates(pics []string) (string, error) {
+func findDuplicates(pics []pic) (string, error) {
 	var (
 		r    string
 		dups []map[string]string
 	)
 
-	for n, pic := range pics {
-		hash, err := findHash(pic)
-		if err != nil {
-			return "", err
-		}
-		var s []string
+	for n, p := range pics {
+		var s []pic
 		if len(pics) == 1 {
 			s = pics[n:]
 		} else {
@@ -50,12 +43,9 @@ func findDuplicates(pics []string) (string, error) {
 		}
 		for _, comp := range s {
 			dup := make(map[string]string)
-			distance, err := compare(hash, comp)
-			if err != nil {
-				return "", err
-			}
+			distance := phash.GetDistance(p.hash, comp.hash)
 			if distance < 3 {
-				dup[pic] = comp
+				dup[p.name] = comp.name
 			}
 			if len(dup) > 0 {
 				dups = append(dups, dup)
@@ -70,27 +60,37 @@ func findDuplicates(pics []string) (string, error) {
 	return r, nil
 }
 
+func topErr(err error) {
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+}
+
 func main() {
 	files, err := ioutil.ReadDir("./")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var pics []string
+	var pics []pic
 	for _, file := range files {
 		name := file.Name()
 		if strings.Contains(name, ".") {
 			format := strings.Split(name, ".")[1]
-			if format == "png" || format == "jpg" {
-				pics = append(pics, name)
+			if format == "png" || format == "jpg" || format == "jpeg" {
+				hash, _ := findHash(name)
+				topErr(err)
+				pics = append(pics, pic{name, hash})
 			}
 		}
 	}
 
 	r, err := findDuplicates(pics)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	topErr(err)
+	if len(pics) < 2 || r == "" {
+		fmt.Println("no duplicates found")
+	} else {
+		fmt.Println(r[:len(r)-1])
 	}
-	fmt.Println(r)
 }

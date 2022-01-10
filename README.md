@@ -1,9 +1,4 @@
 # antidup
-to find duplicates of photos
+to find duplicates of photos (.png, .jpg and .jpeg)
 
 ![](example.png)
-
-# TODO
-- [ ] .jpeg                                                   
-- [ ] optimizations
-- [ ] one file bug
