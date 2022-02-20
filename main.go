@@ -1,12 +1,15 @@
 package main
 
 import (
+	"antidup/help"
 	"fmt"
 	"github.com/Stasenko-Konstantin/phash"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/urfave/cli/v2"
 )
 
 type pic struct {
@@ -54,7 +57,7 @@ func findDuplicates(pics []pic) (string, error) {
 	}
 	for _, dup := range dups {
 		for k, e := range dup {
-			r += k + ": " + e + "\n"
+			r += "\t" + k + " dup " + e + "\n"
 		}
 	}
 	return r, nil
@@ -67,17 +70,17 @@ func topErr(err error) {
 	}
 }
 
-func main() {
-	files, err := ioutil.ReadDir("./")
+func check(dir string) error {
+	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var pics []pic
 	for _, file := range files {
 		name := file.Name()
 		if strings.Contains(name, ".") {
-			format := strings.Split(name, ".")[1]
+			format := help.Reverse(help.TakeWhile(help.Reverse(name), '.'))
 			if format == "png" || format == "jpg" || format == "jpeg" {
 				hash, _ := findHash(name)
 				topErr(err)
@@ -89,8 +92,51 @@ func main() {
 	r, err := findDuplicates(pics)
 	topErr(err)
 	if len(pics) < 2 || r == "" {
-		fmt.Println("no duplicates found")
+		fmt.Println(dir + ": no duplicates found")
 	} else {
-		fmt.Println(r[:len(r)-1])
+		fmt.Println(dir + ":\n" + r[:len(r)-1])
+	}
+	return nil
+}
+
+func main() {
+	app := &cli.App{
+		Name:  "antidup",
+		Usage: "to find duplicates of photos ",
+		Commands: []*cli.Command{
+			{
+				Name:    "rec",
+				Aliases: []string{"r"},
+				Usage:   "shallow recursive check of the subfolders of the current directory",
+				Action: func(c *cli.Context) error {
+					files, err := ioutil.ReadDir("./")
+					if err != nil {
+						return err
+					}
+					err = check("./")
+					if err != nil {
+						return err
+					}
+					for _, file := range files {
+						if file.IsDir() {
+							err := check(file.Name())
+							if err != nil {
+								return err
+							}
+						}
+					}
+					return nil
+				},
+			},
+		},
+		Action: func(c *cli.Context) error {
+			err := check("./")
+			return err
+		},
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
