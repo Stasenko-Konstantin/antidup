@@ -7,3 +7,4 @@ to find duplicates of photos (.png, .jpg and .jpeg)
 - [ ] Recursive analysis of subdirectories
 - [ ] Analysis of the selected subdirectory
 - [ ] Trace
+- [ ] Loading animation
