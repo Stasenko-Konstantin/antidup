@@ -8,3 +8,4 @@ to find duplicates of photos (.png, .jpg and .jpeg)
 - [ ] Analysis of the selected subdirectory
 - [ ] Trace
 - [ ] Loading animation
+- [ ] Display of image size in mb/kb
