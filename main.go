@@ -57,7 +57,7 @@ func findDuplicates(pics []pic) (string, error) {
 	}
 	for _, dup := range dups {
 		for k, e := range dup {
-			r += "\t" + k + " dup " + e + "\n"
+			r += "\t" + k + "  --  " + e + "\n"
 		}
 	}
 	return r, nil
@@ -130,8 +130,19 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			err := check("./")
-			return err
+			args := os.Args
+			if len(args) > 1 {
+				for _, dir := range args[1:] {
+					err := check(dir)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			} else {
+				err := check("./")
+				return err
+			}
 		},
 	}
 
