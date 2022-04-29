@@ -37,6 +37,7 @@ func findDuplicates(pics []pic) (string, error) {
 		dups []map[string]string
 	)
 
+	fmt.Println("calculation...")
 	for n, p := range pics {
 		var s []pic
 		if len(pics) == 1 {
@@ -55,6 +56,7 @@ func findDuplicates(pics []pic) (string, error) {
 			}
 		}
 	}
+	fmt.Fprintf(os.Stdout, "\r\033[K")
 	for _, dup := range dups {
 		for k, e := range dup {
 			r += "\t" + k + "  --  " + e + "\n"
@@ -80,11 +82,13 @@ func check(dir string) error {
 	for _, file := range files {
 		name := file.Name()
 		if strings.Contains(name, ".") {
-			format := help.Reverse(help.TakeWhile(help.Reverse(name), '.'))
+			format := help.GetFormat(name)
 			if format == "png" || format == "jpg" || format == "jpeg" {
-				hash, _ := findHash(name)
+				hash, err := findHash(name)
 				topErr(err)
-				pics = append(pics, pic{name, hash})
+				size, err := help.GetSize(name)
+				topErr(err)
+				pics = append(pics, pic{name + ", " + size, hash})
 			}
 		}
 	}
