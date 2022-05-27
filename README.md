@@ -4,8 +4,8 @@ to find duplicates of photos (.png, .jpg and .jpeg)
 ![](example.png)
 
 # TODO
-- [x] Loading ~~animation~~ message
-- [x] Display of image size in mb/kb
+- [ ] Loading ~~animation~~ message
+- [x] Display of image size in mb/kb/etc
 - [ ] Recursive analysis of subdirectories
-- [ ] Analysis of the selected subdirectory
-- [ ] Trace
+- [ ] Analysis of the selected directory
+- [ ] Cache
