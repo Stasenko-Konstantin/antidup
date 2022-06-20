@@ -1,3 +1,5 @@
+deprecated. see https://github.com/Stasenko-Konstantin/antidup-rs
+
 # antidup
 to find duplicates of photos (.png, .jpg and .jpeg)
 
