@@ -1,3 +1,5 @@
+let isNeedRemoveDuplicates = false
+
 function loadZip(event: Event)  {
   const target = event.target as HTMLInputElement
   if (!target.files || target.files.length != 1) {
@@ -10,7 +12,7 @@ function loadZip(event: Event)  {
   }
 }
 
-function main(): void {
+function main() {
   document.title = "antidup"
 
   const title = document.createElement('h1');
@@ -20,6 +22,20 @@ function main(): void {
   const paragraph = document.createElement('p');
   paragraph.textContent = 'load .zip archive of your pictures and I say what duplicates it have.';
   document.body.appendChild(paragraph);
+
+  const needRemoveDuplicatesCheckbox = document.createElement("input")
+  needRemoveDuplicatesCheckbox.type = "checkbox"
+  needRemoveDuplicatesCheckbox.id = "toggleSwitch"
+
+  const needRemoveDuplicatesLabel = document.createElement("label")
+  needRemoveDuplicatesLabel.appendChild(needRemoveDuplicatesCheckbox)
+  needRemoveDuplicatesLabel.appendChild(document.createTextNode("remove duplicates?"))
+
+  needRemoveDuplicatesCheckbox.addEventListener("change", () => {
+    isNeedRemoveDuplicates = needRemoveDuplicatesCheckbox.checked
+  })
+
+  document.body.appendChild(needRemoveDuplicatesLabel)
 
   const fileInput = document.createElement("input")
   fileInput.type = "file"
@@ -43,4 +59,4 @@ function main(): void {
   document.body.appendChild(author)
 }
 
-main();
+main()
