@@ -1,5 +1,7 @@
 .idea
 *.*~
+.#*
+*#*
 web/dist
 web/node_modules
 web/bower_components/
@@ -12,3 +14,5 @@ web/.psc*
 web/.purs*
 web/.psa*
 web/.spago
+web/spago.dhall.save
+web/index.js
