@@ -15,6 +15,9 @@ import Web.DOM.Document as DD
 import Web.DOM.Element as DE
 import Web.DOM.Node (setTextContent, appendChild)
 
+inBody (Just b) f = f b
+inBody Nothing  _ = throw "cannot get body of document"
+
 main :: Effect Unit
 main = do
   let titleStr = "antidup"
@@ -23,19 +26,15 @@ main = do
   HD.setTitle titleStr doc
 
   body <- HD.body doc
-                        
+                              
   title <- DD.createElement "h1" $ HD.toDocument doc
   setTextContent titleStr (DE.toNode title)
-  -- bodyNode <- HE.toNode body
-  case body of
-    Just b -> do
-      appendChild (DE.toNode title) (HE.toNode b)
-    Nothing -> pure unit
+  inBody body (\b -> appendChild (DE.toNode title) (HE.toNode b))
 
-{-
+  parahraph <- DD.createElement "p" $ HD.toDocument doc
+  setTextContent
+    "load .zip archive of your pictures and I say what duplicates it have."
+    (DE.toNode parahraph)
+  inBody body (\b -> appendChild (DE.toNode parahraph) (HE.toNode b))
 
-const title = document.createElement('h1');
-title.textContent = `antidup`;
-document.body.appendChild(title);
-
--}
+  

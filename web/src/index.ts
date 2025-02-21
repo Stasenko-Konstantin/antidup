@@ -13,16 +13,6 @@ function loadZip(event: Event)  {
 }
 
 function main() {
-  document.title = "antidup"
-
-  const title = document.createElement('h1');
-  title.textContent = `antidup`;
-  document.body.appendChild(title);
-
-  const paragraph = document.createElement('p');
-  paragraph.textContent = 'load .zip archive of your pictures and I say what duplicates it have.';
-  document.body.appendChild(paragraph);
-
   const needRemoveDuplicatesCheckbox = document.createElement("input")
   needRemoveDuplicatesCheckbox.type = "checkbox"
   needRemoveDuplicatesCheckbox.id = "toggleSwitch"
