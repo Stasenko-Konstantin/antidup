@@ -13,20 +13,15 @@ function loadZip(event: Event)  {
 }
 
 function main() {
-  const needRemoveDuplicatesCheckbox = document.createElement("input")
-  needRemoveDuplicatesCheckbox.type = "checkbox"
-  needRemoveDuplicatesCheckbox.id = "toggleSwitch"
 
-  const needRemoveDuplicatesLabel = document.createElement("label")
-  needRemoveDuplicatesLabel.appendChild(needRemoveDuplicatesCheckbox)
-  needRemoveDuplicatesLabel.appendChild(document.createTextNode("remove duplicates?"))
+  // TODO
 
   needRemoveDuplicatesCheckbox.addEventListener("change", () => {
     isNeedRemoveDuplicates = needRemoveDuplicatesCheckbox.checked
   })
-
-  document.body.appendChild(needRemoveDuplicatesLabel)
-
+  
+  // TODO 
+  
   const fileInput = document.createElement("input")
   fileInput.type = "file"
   fileInput.style.display = "none"
@@ -40,13 +35,4 @@ function main() {
   })
   document.body.appendChild(loadButton)
 
-  document.body.appendChild(document.createElement("hr"))
-
-  const author = document.createElement("a")
-  author.href = "https://github.com/Stasenko-Konstantin"
-  author.textContent = "author github page"
-  author.target = "_blank"
-  document.body.appendChild(author)
 }
-
-main()

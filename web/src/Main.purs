@@ -21,9 +21,22 @@ import Web.DOM.Element as DE
 import Web.DOM.Node (setTextContent, appendChild)
 import Web.DOM.Text as DT
 
+import Web.Event.Event (target)
+import Web.Event.Internal.Types
+
 inMaybe :: forall a. Maybe a -> (a -> Effect Unit) -> Effect Unit
 inMaybe (Just x) f = f x
 inMaybe Nothing  _ = throw "cannot get body of document"
+
+-- TODO
+{-
+loadZip :: Event -> Effect Unit
+loadZip e = inMaybe (target e) help
+  where
+    help e = if 
+      where
+        t = HIE.fromEventTarget e
+-}
 
 main :: Effect Unit
 main = do
