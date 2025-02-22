@@ -17,6 +17,7 @@ to generate this file without the comments in this block.
   , "exceptions"
   , "maybe"
   , "prelude"
+  , "unsafe-coerce"
   , "web-dom"
   , "web-html"
   ]
