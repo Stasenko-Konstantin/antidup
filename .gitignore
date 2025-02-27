@@ -2,17 +2,3 @@
 *.*~
 .#*
 *#*
-web/dist
-web/node_modules
-web/bower_components/
-web/node_modules/
-web/.pulp-cache/
-web/output/
-web/generated-docs/
-web/.psc-package/
-web/.psc*
-web/.purs*
-web/.psa*
-web/.spago
-web/spago.dhall.save
-web/index.js
