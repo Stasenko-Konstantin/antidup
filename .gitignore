@@ -1,4 +1,5 @@
 .idea
-target
-deploy.sh
+*.*~
+.#*
+*#*
 antidup

@@ -1,4 +1,4 @@
 #!/bin/sh
 
-cargo build --release
-sudo cp target/release/antidup-rs /bin/antidup
+go build ./...
+sudo cp antidup /bin/antidup
