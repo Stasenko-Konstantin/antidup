@@ -17,7 +17,7 @@ processes 2.5k images for 1.5m
 
 ### get
 
-requires [cargo](https://www.rust-lang.org/tools/install) for building executable file
+requires nightly [cargo](https://www.rust-lang.org/tools/install) for building executable file
 
 ```bash
 git clone git@github.com:Stasenko-Konstantin/antidup-rs.git 
