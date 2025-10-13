@@ -4,15 +4,14 @@ use crate::phash::*;
 use clap::Parser;
 use rayon::prelude::*;
 use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::fmt::Debug;
 use std::fs::{remove_file, DirEntry};
 use std::path::PathBuf;
-use std::process::exit;
 
 mod phash;
 
-#[derive(Debug, Clone, Eq, Hash)]
+const MIN_DISTANCE: usize = 10;
+
+#[derive(Debug, Clone, Eq)]
 struct Pic {
     name: String,
     hash: String,
@@ -26,15 +25,19 @@ impl PartialEq for Pic {
 }
 
 impl Pic {
-    fn find_size(self) -> String {
-        const KB: u64 = 1024;
-        let size = self.size;
-        match size {
-            _ if size < KB => format!("{:.2}b", size),
-            _ if size < u64::pow(KB, 2) => format!("{:.2}kb", size / 1024),
-            _ if size < u64::pow(KB, 3) => format!("{:.2}mb", size / 1024 / 1024),
-            _ if size < u64::pow(KB, 4) => format!("{:.2}gb", size / 1024 / 1024 / 1024),
-            _ => format!("{}b", size),
+    fn find_size(&self) -> String {
+        const KB: f64 = 1024.0;
+        let sizef = self.size as f64;
+        if sizef < KB {
+            format!("{:.2}b", sizef)
+        } else if sizef < KB.powi(2) {
+            format!("{:.2}kb", sizef / KB)
+        } else if sizef < KB.powi(3) {
+            format!("{:.2}mb", sizef / KB.powi(2))
+        } else if sizef < KB.powi(4) {
+            format!("{:.2}gb", sizef / KB.powi(3))
+        } else {
+            format!("{}b", self.size)
         }
     }
 }
@@ -67,33 +70,33 @@ struct Args {
 }
 
 fn main() {
-        let mut args = Args::parse();
-        if args.recursive == Recursive::Non {
-            args.deep = 1;
-        }
-        check(
-            if args.path.is_some() {
-                args.path.clone().unwrap()
-            } else {
-                PathBuf::from("./")
-            },
-            args,
-    );
+    let args = Args::parse();
+    let path = args.path.clone().unwrap_or_else(|| PathBuf::from("./"));
+    check(path, args);
 }
 
 fn read_dir(dir: PathBuf) -> Vec<DirEntry> {
-    let formats: Vec<&OsStr> = vec!["png".as_ref(), "jpg".as_ref(), "jpeg".as_ref()];
-    dir.clone()
-        .read_dir()
-        .unwrap_or_else(|_| panic!("cant read path: {}", dir.display()))
-        .filter(|f| {
-            f.as_ref().unwrap().path().extension().is_some()
-                && formats.contains(&(f.as_ref().unwrap().path().extension().unwrap()))
-        })
-        .map(|f| f.unwrap())
-        .collect()
-}
+    let formats = ["png", "jpg", "jpeg"];
+    let mut result = Vec::new();
 
+    let rd = match dir.read_dir() {
+        Ok(it) => it,
+        Err(_) => return result,
+    };
+
+    for entry in rd.flatten() {
+        let path = entry.path();
+        if let Some(ext_os) = path.extension() {
+            if let Some(ext_str) = ext_os.to_str() {
+                let ext_low = ext_str.to_ascii_lowercase();
+                if formats.contains(&ext_low.as_str()) {
+                    result.push(entry);
+                }
+            }
+        }
+    }
+    result
+}
 fn mk_file_index(
     res: &mut HashMap<PathBuf, Vec<DirEntry>>,
     root: PathBuf,
@@ -101,68 +104,81 @@ fn mk_file_index(
     is_flat: bool,
     deep: u32,
 ) {
+    // читаем файлы в текущей директории
     let mut files: Vec<DirEntry> = read_dir(dir.clone());
-    if files.len() < 2 {
-        println!("{:?}: no duplicates found", dir);
-        exit(0);
+
+    // вставляем в индекс в зависимости от режима
+    if !files.is_empty() {
+        if is_flat {
+            // flat: собираем ВСЁ под ключом root (перемещаем файлы в бакет root)
+            let bucket = res.entry(root.clone()).or_insert_with(Vec::new);
+            bucket.append(&mut files); // переносим элементы из files в bucket
+        } else {
+            // segmented (и non—тоже): добавляем текущую директорию как отдельный сегмент,
+            // но только если в ней >= 2 файлов (как у тебя было раньше)
+            if files.len() >= 2 {
+                res.insert(dir.clone(), files); // перемещаем files в map (без клонирования)
+            } // иначе — не вставляем
+        }
     }
 
+    // если глубина 0 — не рекурсить дальше
     if deep == 0 {
-        res.insert(dir, files);
-    } else {
-        if !is_flat {
-            res.insert(dir.clone(), files);
-        } else if !res.contains_key(&dir) && is_flat {
-            res.insert(root, files);
-        } else {
-            res.get_mut(&dir).unwrap().append(&mut files);
+        return;
+    }
+
+    // рекурсивный обход подпапок (без паники)
+    let rd = match dir.read_dir() {
+        Ok(it) => it,
+        Err(_) => return,
+    };
+
+    for entry in rd.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            mk_file_index(
+                res,
+                root.clone(),
+                p,
+                is_flat,
+                deep.saturating_sub(1),
+            );
         }
-        let _ = dir
-            .read_dir()
-            .unwrap_or_else(|_| panic!("cant read path: {}", dir.display()))
-            .filter(|e| e.as_ref().unwrap().path().is_dir())
-            .map(|d| {
-                mk_file_index(
-                    res,
-                    dir.clone(),
-                    d.unwrap_or_else(|_| panic!("cant read path: {}", dir.display()))
-                        .path(),
-                    is_flat,
-                    deep - 1,
-                )
-            });
     }
 }
 
 fn check(dir: PathBuf, args: Args) {
-    let is_flat = matches!(args.recursive, Recursive::Flat);
+    let mode = args.recursive.clone();
     let mut files: HashMap<PathBuf, Vec<DirEntry>> = HashMap::new();
-    mk_file_index(&mut files, dir.clone(), dir.clone(), is_flat, args.deep);
+    mk_file_index(&mut files, dir.clone(), dir.clone(), mode == Recursive::Flat, args.deep);
+
+    if files.is_empty() {
+        println!("No directories with >=2 supported images found under {}", dir.display());
+        return;
+    }
 
     println!("calculation...");
 
-    let mut pics: HashMap<&PathBuf, Vec<Option<Pic>>> = HashMap::new();
+    let mut pics: HashMap<PathBuf, Vec<Option<Pic>>> = HashMap::new();
     for (k, v) in files.iter() {
-        pics.insert(
-            k,
-            v.par_iter()
-                .map(|e| {
-                    let name = e
-                        .path()
-                        .file_name()?
-                        .to_string_lossy()
-                        .chars()
-                        .as_str()
-                        .to_string();
-                    if !args.quiet {
-                        println!("{}", name);
-                    }
-                    let hash = find_hash(name.clone())?;
-                    let size = e.metadata().unwrap().len();
-                    Some(Pic { name, hash, size })
-                })
-                .collect(),
-        );
+        let key = k.clone();
+        let vec_of_pics: Vec<Option<Pic>> = v
+            .par_iter()
+            .map(|e| {
+                let path = e.path();
+                let name = path.to_string_lossy().to_string();
+                if !args.quiet {
+                    println!("{}", name);
+                }
+                let hash = match find_hash(&name) {
+                    Some(h) => h,
+                    None => return None,
+                };
+                let size = e.metadata().ok().map(|m| m.len()).unwrap_or(0);
+                Some(Pic { name, hash, size })
+            })
+            .collect();
+        pics.insert(key, vec_of_pics);
     }
 
     pics.par_iter()
@@ -170,70 +186,85 @@ fn check(dir: PathBuf, args: Args) {
 }
 
 fn process_pics(dir: &PathBuf, pics: &[Option<Pic>], rm: bool) {
-    let result = find_duplicates(pics);
-    if result.is_empty() {
-        println!("{:?}: no duplicates found", dir);
-    } else {
-        let mut s = "".to_string();
-        for (k, v) in result {
-            if rm {
-                let d = if k.size < v.size {
-                    k.clone()
-                } else {
-                    v.clone()
-                };
-                remove_file(d.name.clone()).unwrap_or_else(|_| panic!("cant delete {}", d.name));
-            }
-            s += format!(
-                "\t{}, {} -- {}, {}\n",
-                k.name.clone(),
-                k.find_size(),
-                v.name.clone(),
-                v.find_size()
-            )
-            .as_str()
-        }
-        println!("{:?}:\n{}", dir, &s[..s.len() - 1]);
+    let pics_vec: Vec<Pic> = pics.iter().filter_map(|p| p.clone()).collect();
+    let n = pics_vec.len();
+    if n < 2 {
+        println!("{:?}: no duplicates found (too few files)", dir);
+        return;
     }
+
+    let mut pairs: Vec<(usize, usize, usize)> = Vec::new();
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if let Some(d) = find_distance(&pics_vec[i].hash, &pics_vec[j].hash) {
+                pairs.push((i, j, d));
+            }
+        }
+    }
+
+    if pairs.is_empty() {
+        println!("{:?}: no comparable hashes (length mismatch?)", dir);
+        return;
+    }
+
+    pairs.sort_by_key(|t| t.2);
+
+    let mut duplicates: Vec<(Pic, Pic)> = Vec::new();
+    for (i, j, d) in pairs.iter() {
+        if *d < MIN_DISTANCE {
+            duplicates.push((pics_vec[*i].clone(), pics_vec[*j].clone()));
+        }
+    }
+
+    if duplicates.is_empty() {
+        println!("{:?}: no duplicates found.", dir);
+        return;
+    }
+
+    let mut s = String::new();
+    for (a, b) in duplicates {
+        if rm {
+            let d = if a.size < b.size { a.clone() } else { b.clone() };
+            remove_file(d.name.clone()).unwrap_or_else(|_| eprintln!("cant delete {}", d.name));
+        }
+        s += format!(
+            "\t{}, {} -- {}, {}\n",
+            a.name.clone(),
+            a.find_size(),
+            b.name.clone(),
+            b.find_size()
+        )
+            .as_str();
+    }
+    if !s.is_empty() && s.ends_with('\n') {
+        s.pop();
+    }
+    println!("{:?}:\n{}", dir, s);
 }
 
-fn find_duplicates(pics: &[Option<Pic>]) -> Vec<(Pic, Pic)> {
-    let mut result: Vec<(Pic, Pic)> = Vec::new();
-    let mut dups: Vec<HashMap<Pic, Pic>> = Vec::new();
-    let mut i = 0;
-    for p in pics {
-        let p = if p.is_some() {
-            p.clone().unwrap()
-        } else {
-            continue;
-        };
-        let s = if pics.len() == 1 {
-            pics[i..].to_vec()
-        } else {
-            pics[i + 1..].to_vec()
-        };
-        for comp in s {
-            let comp = if comp.is_some() {
-                comp.unwrap()
-            } else {
-                continue;
-            };
-            let p = p.clone();
-            let mut dup = HashMap::new();
-            let distance = find_distance(&p.hash.chars(), &comp.hash.chars());
-            if distance < MIN_DISTANCE {
-                dup.insert(p, comp);
-            }
-            if !dup.is_empty() {
-                dups.push(dup.clone());
-            }
+fn find_hash(path: &str) -> Option<String> {
+    let size = 50u32;
+    let img = match image::open(path) {
+        Ok(img) => img
+            .resize_to_fill(size, size, image::imageops::Lanczos3)
+            .grayscale(),
+        Err(_) => return None,
+    };
+
+    let gray = img.to_luma8();
+    let (x_size, y_size) = gray.dimensions();
+    let mut matrix: Matrix = Vec::with_capacity(x_size as usize);
+    for x in 0..x_size {
+        let mut col = Vec::with_capacity(y_size as usize);
+        for y in 0..y_size {
+            col.push(gray.get_pixel(x, y)[0] as f64);
         }
-        i += 1;
+        matrix.push(col);
     }
-    for dup in dups {
-        for (k, v) in dup {
-            result.push((k, v));
-        }
-    }
-    result
+
+    let dct_matrix = find_dct_matrix(matrix);
+    let small = reduce_matrix(&dct_matrix, 8);
+    let threshold = calculate_median_value(&small);
+    let hash = build_hash(&small, threshold);
+    Some(hash)
 }

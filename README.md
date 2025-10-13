@@ -4,13 +4,16 @@ based on [phash algorithm](https://www.phash.org/docs/pubs/thesis_zauner.pdf)
 
 ![](example.png)
 
+processes 2.5k images for 1.5m 
+
 ### todo
 - [x] loading ~~animation~~ message
 - [x] display of image size in mb/KB/etc
 - [x] analysis of the selected directory
 - [x] delete duplicates
-- [ ] fix image reading
-- [ ] fix help message (antidup-rs -> antidup)
+- [x] fix image reading
+- [x] fix help message (antidup-rs -> antidup)
+- [ ] strictness
 
 ### get
 
@@ -27,12 +30,14 @@ antidup -h
 ### usage
 
 ```bash
-Usage: antidup-rs [OPTIONS]
+Usage: antidup [OPTIONS]
 
 Options:
-  -q, --quiet        
-  -r, --rm           
-  -p, --path <PATH>  
-  -h, --help         Print help
-  -V, --version      Print version
+  -q, --quiet                  
+      --rm                     
+  -r, --recursive <RECURSIVE>  [default: non] [possible values: non, segmented, flat]
+  -d, --deep <DEEP>            [default: 0]
+  -p, --path <PATH>            
+  -h, --help                   Print help
+  -V, --version                Print version
 ```
