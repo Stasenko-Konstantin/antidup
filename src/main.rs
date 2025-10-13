@@ -104,30 +104,23 @@ fn mk_file_index(
     is_flat: bool,
     deep: u32,
 ) {
-    // читаем файлы в текущей директории
     let mut files: Vec<DirEntry> = read_dir(dir.clone());
 
-    // вставляем в индекс в зависимости от режима
     if !files.is_empty() {
         if is_flat {
-            // flat: собираем ВСЁ под ключом root (перемещаем файлы в бакет root)
             let bucket = res.entry(root.clone()).or_insert_with(Vec::new);
-            bucket.append(&mut files); // переносим элементы из files в bucket
+            bucket.append(&mut files);
         } else {
-            // segmented (и non—тоже): добавляем текущую директорию как отдельный сегмент,
-            // но только если в ней >= 2 файлов (как у тебя было раньше)
             if files.len() >= 2 {
-                res.insert(dir.clone(), files); // перемещаем files в map (без клонирования)
-            } // иначе — не вставляем
+                res.insert(dir.clone(), files);
+            }
         }
     }
 
-    // если глубина 0 — не рекурсить дальше
     if deep == 0 {
         return;
     }
 
-    // рекурсивный обход подпапок (без паники)
     let rd = match dir.read_dir() {
         Ok(it) => it,
         Err(_) => return,
