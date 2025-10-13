@@ -67,17 +67,17 @@ struct Args {
 }
 
 fn main() {
-    let mut args = Args::parse();
-    if args.recursive == Recursive::Non {
-        args.deep = 1;
-    }
-    check(
-        if args.path.is_some() {
-            args.path.clone().unwrap()
-        } else {
-            PathBuf::from("./")
-        },
-        args,
+        let mut args = Args::parse();
+        if args.recursive == Recursive::Non {
+            args.deep = 1;
+        }
+        check(
+            if args.path.is_some() {
+                args.path.clone().unwrap()
+            } else {
+                PathBuf::from("./")
+            },
+            args,
     );
 }
 

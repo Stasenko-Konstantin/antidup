@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-image = "0.23.14"
-clap = { version = "4.0", features = ["derive"] }
-rayon = "1.10.0"
+image = "0.25.8"
+clap = { version = "4.5.48", features = ["derive"] }
+rayon = "1.11.0"

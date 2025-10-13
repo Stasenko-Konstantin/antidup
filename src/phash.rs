@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-use image::{DynamicImage, GenericImageView, Pixel};
+use image::{DynamicImage};
 use std::f64::consts::PI;
 use std::ops::Add;
 use std::panic;
@@ -8,9 +8,9 @@ use std::str::Chars;
 // MIN_DISTANCE - threshold of duplicates distance
 pub const MIN_DISTANCE: i32 = 3;
 
-type Matrix = Vec<Vec<f64>>;
+pub type Matrix = Vec<Vec<f64>>;
 
-struct DctPoint<'a> {
+pub struct DctPoint<'a> {
     x_max: i64,
     y_max: i64,
     x_scales: &'a mut [f64; 2],
@@ -18,7 +18,16 @@ struct DctPoint<'a> {
 }
 
 impl DctPoint<'_> {
-    fn calculate(&self, image_data: &Matrix, x: i64, y: i64) -> f64 {
+    pub fn new<'a>(x: i64, y: i64, x_s: &'a mut [f64; 2], y_s: &'a mut [f64; 2]) -> DctPoint<'a> {
+        DctPoint {
+            x_max: x,
+            y_max: y,
+            x_scales: x_s,
+            y_scales: y_s,
+        }
+    }
+
+    pub fn calculate(&self, image_data: &Matrix, x: i64, y: i64) -> f64 {
         let mut sum = 0.;
         for i in 0..self.x_max {
             for j in 0..self.y_max {
@@ -27,13 +36,14 @@ impl DctPoint<'_> {
                     ((((1 + (2 * i)) * x) as f64) * PI / (2. * self.x_max as f64)).cos();
                 let snd_cosine =
                     ((((1 + (2 * j)) * y) as f64) * PI / (2. * self.y_max as f64)).cos();
-                sum += image_value * fst_cosine * snd_cosine;
+                let s = image_value * fst_cosine * snd_cosine;
+                sum += s;
             }
         }
         sum * self.find_scale_factor(x, y)
     }
 
-    fn find_scale_factor(&self, x: i64, y: i64) -> f64 {
+    pub fn find_scale_factor(&self, x: i64, y: i64) -> f64 {
         let mut x_scale_factor = self.x_scales[1];
         if x == 0 {
             x_scale_factor = self.x_scales[0];
@@ -72,30 +82,30 @@ pub fn find_hash(img: String) -> Option<String> {
 }
 
 fn find_image_matrix(img: DynamicImage) -> Matrix {
-    let (_, _, x_size, y_size) = img.bounds();
-    let mut matrix: Matrix = Vec::new();
+    let gray = img.to_luma8();
+    let (x_size, y_size) = gray.dimensions();
+    let mut matrix: Matrix = Vec::with_capacity(x_size as usize);
     for x in 0..x_size {
-        matrix.push(Vec::new());
+        let mut col = Vec::with_capacity(y_size as usize);
         for y in 0..y_size {
-            matrix[x as usize].push(find_xy_value(img.clone(), x, y));
+            col.push(gray.get_pixel(x, y)[0] as f64);
         }
+        matrix.push(col);
     }
     matrix
 }
 
-fn find_xy_value(img: DynamicImage, x: u32, y: u32) -> f64 {
-    img.get_pixel(x, y).to_bgr().0[0] as f64
-}
-
-fn find_dct_matrix(matrix: Matrix) -> Matrix {
+pub fn find_dct_matrix(matrix: Matrix) -> Matrix {
     let x_max = matrix.len();
     let y_max = matrix[0].len();
-    let dct_point = &DctPoint {
-        x_max: x_max as i64,
-        y_max: y_max as i64,
-        x_scales: &mut [1. / (x_max as f64).sqrt(), (2. / x_max as f64).sqrt()],
-        y_scales: &mut [1. / (y_max as f64).sqrt(), (2. / y_max as f64).sqrt()],
-    };
+    let mut x_s = [1. / (x_max as f64).sqrt(), (2. / x_max as f64).sqrt()];
+    let mut y_s = [1. / (y_max as f64).sqrt(), (2. / y_max as f64).sqrt()];
+    let dct_point = DctPoint::new (
+        x_max as i64,
+        y_max as i64,
+        &mut x_s,
+        &mut y_s,
+    );
     let mut dct_matrix: Matrix = Vec::new();
     for x in 0..x_max {
         dct_matrix.push(Vec::new());
@@ -106,7 +116,7 @@ fn find_dct_matrix(matrix: Matrix) -> Matrix {
     dct_matrix
 }
 
-fn reduce_matrix(dct_matrix: Matrix, size: i64) -> Matrix {
+pub fn reduce_matrix(dct_matrix: Matrix, size: i64) -> Matrix {
     let mut new_matrix: Matrix = Vec::new();
     for x in 0..size {
         new_matrix.push(Vec::new());
@@ -117,7 +127,7 @@ fn reduce_matrix(dct_matrix: Matrix, size: i64) -> Matrix {
     new_matrix
 }
 
-fn calculate_mean_value(dct_matrix: &Matrix) -> f64 {
+pub fn calculate_mean_value(dct_matrix: &Matrix) -> f64 {
     let mut avg = 0.;
     let n = dct_matrix.len();
     for x in 0..n {
@@ -128,7 +138,7 @@ fn calculate_mean_value(dct_matrix: &Matrix) -> f64 {
     avg
 }
 
-fn build_hash(dct_matrix: Matrix, dct_mean_value: f64) -> String {
+pub fn build_hash(dct_matrix: Matrix, dct_mean_value: f64) -> String {
     let mut hash = String::new();
     let x_size = dct_matrix.len();
     let y_size = dct_matrix[0].len();
